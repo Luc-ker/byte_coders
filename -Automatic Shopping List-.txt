@@ -1,0 +1,15 @@
+-Automatic Shopping List-
+
+-User inputs estimate data
+-Takes photo of receipt
+-App analyses all products bought
+-Records cost/who bought/etc.
+-Store on Google Cloud
+-Track consumption rate (override user estimates if necessary)
+-Notify when estimated time approaches
+
+UI - Display all info
+
+AI - Reading receipt, Interprets data
+
+SQL - Store on Google Cloud, Fetch/Retrieve Info
