@@ -1,6 +1,7 @@
-import sqlite3, csv
+import sqlite3, csv, os
 conn = sqlite3.connect('example.db')
 cursor = conn.cursor()
+
 #Creates whole database
 #All primary keys are planned to simply be integers incremented by 1 as the number of items in a table grows.
 def setup():
@@ -50,7 +51,8 @@ def setup():
     `Lastname` varchar(30) DEFAULT NULL,
     `UserID` int(11) PRIMARY KEY,
     `Username` varchar(30) DEFAULT NULL,
-    `Password` varchar(30) DEFAULT NULL
+    `Password` varchar(30) DEFAULT NULL,
+    `Email` varchar(50) DEFAULT NULL
     );''')
     #cursor.execute('''INSERT INTO users VALUES('Brandon', 'Ryan-Izzard', '1', 'Brizzard', 'no')''')
     #cursor.execute('''SELECT * FROM users;''')
@@ -58,25 +60,59 @@ def setup():
 #setup()
 
 #Creates new user
-def newUser(fn, ln, id, un, pw):
-    cursor.execute('''INSERT INTO users VALUES(?, ?, ?, ?, ?)''', (fn, ln, id, un, pw))
+def newUser(fn, ln, un, pw, email):
+    cursor.execute('''INSERT INTO users VALUES(?, ?, NULL, ?, ?, ?)''', (fn, ln, un, pw, email))
+    conn.commit()
+
+# function assumes that the user exists!
+def userReged(un):
+    cursor.execute(f'''SELECT Username FROM users WHERE Username = "{un}"''')
+    res = cursor.fetchall()
+    return len(res) > 0
+
+def getUserEmail(un):
+    cursor.execute(f'''SELECT Email FROM users WHERE Username = "{un}"''')
+    return cursor.fetchall()[0][0]
+
+def getUserDetails(un, pw):
+    cursor.execute(f'''SELECT Firstname, Lastname FROM users WHERE Username = "{un}" AND Password = "{pw}"''')
+    res = cursor.fetchall()
+    if len(res) > 0:
+        return res[0]
+    else:
+        return res
+    
+def getUserPassword(un):
+    cursor.execute(f'''SELECT Password FROM users WHERE Username = "{un}"''')
+    return cursor.fetchall()[0][0]
+
+def updatePassword(un, pw):
+    cursor.execute('''UPDATE users SET Password = ? WHERE Username = ?''', (pw, un))
+    conn.commit()
+
+
 #Adds a new user to the group
 def appendGroup(user, group, gID):
     cursor.execute('''INSERT INTO groupsusers VALUES(?, ?, ?)''', (user, group, gID))
+    
 #Creates a new group, then adds a user to the group
 def newGroup(g, gname, user, gID):
     cursor.execute('''INSERT INTO groups VALUES(?, ?)''', (g, gname))
     appendGroup(user, g, gID)
+
 #Adds a new item to a list
 def appendList(iID, lID, days ,siID):
     cursor.execute('''INSERT INTO shoppingListItem VALUES(?, ?, ?, ?)''', (iID, lID, days, siID))
+
 #Creates a new list, then adds an item to the list
 def newList(lID, gID, iID, days, siID):
     cursor.execute('''INSERT INTO shoppingList VALUES(?, ?)''', (lID, gID))
     appendList(iID, lID, days, siID)
+
 #Creates a new item
 def newItem(iID, name, price, store):
     cursor.execute('''INSERT INTO item VALUES(?, ?, ?, ?)''', (iID, name, price, store))
+    
 #Adds the csv contents into the Items table
 #NOTE: Currently only works for format StoreName, ID, Name, Price
 def toDB():
@@ -85,6 +121,11 @@ def toDB():
         next(reader)
         for row in reader:
             cursor.execute('''INSERT INTO item(Store, ItemID, Name, Price) VALUES (?, ?, ?, ?)''', row)
+
+
+if __name__ == "__main__":
+    setup()
+    print(getUserDetails("jlee4889", "test"))
 
 #setup()
 #toDB()
