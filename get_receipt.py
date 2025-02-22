@@ -4,6 +4,7 @@ import re
 
 def get_image():
     cam = cv2.VideoCapture(0)
+    img_name = ""
 
     while True:
         ret, frame = cam.read()
@@ -35,6 +36,7 @@ def get_image():
 
     cam.release()
     cv2.destroyAllWindows()
+    return img_name
 
 
 if __name__ == "__main__":

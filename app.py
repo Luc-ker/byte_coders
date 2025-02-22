@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
 import get_receipt
-import subprocess
 
 class App():
     def __init__(self):
@@ -12,15 +11,13 @@ class App():
         menu_bar = tk.Menu(self.root)
         options_menu = tk.Menu(menu_bar, tearoff=0)
         options_menu.add_command(label="Upload Reciept", command=self.upload_reciept)
+        options_menu.add_command(label="Show groups", command=self.show_group_frame)
         options_menu.add_command(label="Show test frame", command=self.show_test_frame)
 
         menu_bar.add_cascade(label="Options", menu=options_menu)
         self.root.config(menu=menu_bar)
 
         self.current_frame = MainFrame(self.root)
-
-        # self.frame.pack()
-
 
         self.root.mainloop()
 
@@ -38,9 +35,31 @@ class App():
             self.current_frame.destroy()
             self.current_frame = TestFrame(self.root)
 
-class MainFrame():
+    def show_group_frame(self):
+        if type(self.current_frame) == GroupFrame:
+            return
+        else:
+            self.current_frame.destroy()
+            self.current_frame = GroupFrame(self.root)
+
+class SwitchableFrame():
+    def __init__(self, root, color):
+        self.frame = tk.Frame(root, bg=color)
+        self.items = []
+
+    def destroy(self):
+        self.frame.destroy()
+
+    def pack(self):
+        self.frame.pack()
+        if type(self.items) == list and len(self.items) > 0:
+            for item in self.items:
+                item.pack()
+
+
+class MainFrame(SwitchableFrame):
     def __init__(self, root):
-        self.frame = tk.Frame(root, bg="red")
+        super(MainFrame, self).__init__(root, "red")
         msg = "Press Space to take an image and Esc to cancel."
         self.info_label = tk.Label(self.frame, text=msg)
         self.img_take = tk.Button(self.frame, text="Take image", command=self.take_image)
@@ -49,41 +68,37 @@ class MainFrame():
         self.pack()
 
     def take_image(self):
-        get_receipt.get_image()
+        img_path = get_receipt.get_image()
+        self.process_image(img_path)
 
     def upload_image(self):
-        file_path = filedialog.askopenfilename()
-        if file_path[-4:] != ".png":
-            print("not an image file")
-            return true
-        else:
+        img_path = filedialog.askopenfilename()
+        if img_path[-4:] == ".png":
             print("valid image file")
-            return false
+            self.process_image(img_path)
+        else:
+            print("not an image file")
+            return
 
-    def destroy(self):
-        self.frame.destroy()
-
-    def pack(self):
-        self.frame.pack()
-        for item in self.items:
-            item.pack()
+    def process_image(self, img_path):
+        print(img_path)
 
 
-class TestFrame():
+class GroupFrame(SwitchableFrame):
     def __init__(self, root):
-        self.canvas = tk.Canvas(root, bg="blue")
-        self.test_button = tk.Button(self.canvas, text="Press me!")
-        self.test_label = tk.Label(self.canvas, text="Press me!")
-        self.items = [self.test_button, self.test_label]
+        super(GroupFrame, self).__init__(root, "blue")
+        self.label = tk.Label(self.frame, text="Groups that you're a part of:")
+        self.items = [self.label]
         self.pack()
 
-    def destroy(self):
-        self.canvas.destroy()
 
-    def pack(self):
-        self.canvas.pack()
-        for item in self.items:
-            item.pack()
+class TestFrame(SwitchableFrame):
+    def __init__(self, root):
+        super(TestFrame, self).__init__(root, "blue")
+        self.test_button = tk.Button(self.frame, text="Press me!")
+        self.test_label = tk.Label(self.frame, text="Press me!")
+        self.items = [self.test_button, self.test_label]
+        self.pack()
 
 
 
