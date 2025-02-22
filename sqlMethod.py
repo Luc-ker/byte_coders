@@ -1,11 +1,15 @@
 import sqlite3
 conn = sqlite3.connect('example.db')
 cursor = conn.cursor()
+#Creates whole database
+#All primary keys are planned to simply be integers incremented by 1 as the number of items in a table grows.
 def setup():
+    #Groups - Stores name of group & ID
     cursor.execute('''CREATE TABLE `groups` (
     `GroupID` int(11) PRIMARY KEY,
     `Name` varchar(30) DEFAULT NULL
     );''')
+    #GroupUsers - Links users to groups
     cursor.execute('''
     CREATE TABLE `groupsusers` (
     `UserID` int(11) DEFAULT NULL,
@@ -14,6 +18,7 @@ def setup():
     FOREIGN KEY (UserID) REFERENCES users(UserID),
     FOREIGN KEY (GroupID) REFERENCES groups(GroupID)
     );''')
+    #Item - Stores information on each item
     cursor.execute('''
     CREATE TABLE `item` (
     `ItemID` int(11) PRIMARY KEY,
@@ -21,12 +26,14 @@ def setup():
     `Price` decimal(4,2) DEFAULT NULL,
     `Quantity` int(11) DEFAULT NULL
     );''')
+    #ShoppingList - Links groups to lists of items
     cursor.execute('''
     CREATE TABLE `shoppinglist` (
     `ListID` int(11) PRIMARY KEY,
     `GroupID` int(11) DEFAULT NULL,
     FOREIGN KEY (GroupID) REFERENCES groups(GroupID)
     );''')
+    #ShoppingListItem - Links items to the list of items.
     cursor.execute('''
     CREATE TABLE `shoppinglistitem` (
     `ItemID` int(11) DEFAULT NULL,
@@ -36,6 +43,7 @@ def setup():
     FOREIGN KEY(ItemID) REFERENCES item(ItemID),
     FOREIGN KEY(ListID) REFERENCES shoppinglist(ListID)
     );''')
+    #Users - Stores information on each user
     cursor.execute('''
     CREATE TABLE `users` (
     `Firstname` varchar(30) DEFAULT NULL,
@@ -48,5 +56,24 @@ def setup():
     #cursor.execute('''SELECT * FROM users;''')
     #print(cursor.fetchall())
 #setup()
+
+#Creates new user
 def newUser(fn, ln, id, un, pw):
     cursor.execute('''INSERT INTO users VALUES(?, ?, ?, ?, ?);'''), (fn, ln, id, un, pw)
+#Adds a new user to the group
+def appendGroup(user, group, gID):
+    cursor.execute('''INSERT INTO groupusers VALUES(?, ?, ?)'''), (user, group, gID)
+#Creates a new group, then adds a user to the group
+def newGroup(g, gname, user, gID):
+    cursor.execute('''INSERT INTO group VALUES(?, ?)'''), (g, gname)
+    appendGroup(user, g, gID)
+#Adds a new item to a list
+def appendList(iID, lID, days ,siID):
+    cursor.execute('''INSERT INTO shoppingListItems VALUES(?, ?, ?, ?)''')
+#Creates a new list, then adds an item to the list
+def newList(lID, gID, iID, days, siID):
+    cursor.execute('''INSERT INTO shoppingList VALUES(?, ?)'''), (lID, gID)
+    appendList(iID, lID, days, siID)
+#Creates a new item
+def newItem(iID, name, price, quantity):
+    cursor.execute('''INSERT INTO item VALUES(?, ?, ?, ?)'''), (iID, name, price, quantity)
