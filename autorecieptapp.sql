@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 22, 2025 at 03:51 PM
+-- Generation Time: Feb 22, 2025 at 04:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -32,14 +32,6 @@ CREATE TABLE `groups` (
   `Name` varchar(30) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `groups`
---
-
-INSERT INTO `groups` (`GroupID`, `Name`) VALUES
-(1, 'Home'),
-(2, 'Prison');
-
 -- --------------------------------------------------------
 
 --
@@ -48,18 +40,9 @@ INSERT INTO `groups` (`GroupID`, `Name`) VALUES
 
 CREATE TABLE `groupsusers` (
   `UserID` int(11) DEFAULT NULL,
-  `GroupID` int(11) DEFAULT NULL
+  `GroupID` int(11) DEFAULT NULL,
+  `guID` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `groupsusers`
---
-
-INSERT INTO `groupsusers` (`UserID`, `GroupID`) VALUES
-(1, 1),
-(2, 1),
-(3, 2),
-(1, 2);
 
 -- --------------------------------------------------------
 
@@ -74,15 +57,6 @@ CREATE TABLE `item` (
   `Quantity` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `item`
---
-
-INSERT INTO `item` (`ItemID`, `Name`, `Price`, `Quantity`) VALUES
-(1, 'Milk', 1.30, 500),
-(2, 'Bread', 1.25, 250),
-(3, 'Rice', 0.95, 500);
-
 -- --------------------------------------------------------
 
 --
@@ -94,14 +68,6 @@ CREATE TABLE `shoppinglist` (
   `GroupID` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `shoppinglist`
---
-
-INSERT INTO `shoppinglist` (`ListID`, `GroupID`) VALUES
-(1, 1),
-(2, 2);
-
 -- --------------------------------------------------------
 
 --
@@ -111,18 +77,9 @@ INSERT INTO `shoppinglist` (`ListID`, `GroupID`) VALUES
 CREATE TABLE `shoppinglistitem` (
   `ItemID` int(11) DEFAULT NULL,
   `ListID` int(11) DEFAULT NULL,
-  `DaysRemaining` int(11) DEFAULT NULL
+  `DaysRemaining` int(11) DEFAULT NULL,
+  `siID` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `shoppinglistitem`
---
-
-INSERT INTO `shoppinglistitem` (`ItemID`, `ListID`, `DaysRemaining`) VALUES
-(1, 1, 5),
-(1, 2, 4),
-(2, 1, 6),
-(3, 2, 7);
 
 -- --------------------------------------------------------
 
@@ -139,15 +96,6 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`Firstname`, `Lastname`, `UserID`, `Username`, `Password`) VALUES
-('Jon', 'Doe', 1, 'JDoe', '1234'),
-('Amanda', 'Person', 2, 'APerson', 'qwerty'),
-('Guy', 'Fawkes', 3, 'GFawkes', 'Gunpowder');
-
---
 -- Indexes for dumped tables
 --
 
@@ -161,6 +109,7 @@ ALTER TABLE `groups`
 -- Indexes for table `groupsusers`
 --
 ALTER TABLE `groupsusers`
+  ADD PRIMARY KEY (`guID`),
   ADD KEY `UserID` (`UserID`),
   ADD KEY `GroupID` (`GroupID`);
 
@@ -181,6 +130,7 @@ ALTER TABLE `shoppinglist`
 -- Indexes for table `shoppinglistitem`
 --
 ALTER TABLE `shoppinglistitem`
+  ADD PRIMARY KEY (`siID`),
   ADD KEY `ItemID` (`ItemID`),
   ADD KEY `ListID` (`ListID`);
 
