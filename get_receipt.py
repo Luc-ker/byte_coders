@@ -20,12 +20,12 @@ def get_image():
             break
         # take screenshot when space key pressed
         elif k%256 == 32:
-            path = f"{os.getcwd()}/images"
+            path = f"{os.getcwd()}/bills_image"
             if not os.path.isdir(path):
                 os.mkdir(path)
                 num = 1
             else:
-                file_nums = [int(f[8:-4]) for f in os.listdir(path) if re.match(r'receipt_[0-9]+.png', f)]
+                file_nums = [int(f[8:-4]) for f in os.listdir(path) if re.match(r'bill_[0-9]+.(?:JPG|jpg)', f)]
                 if len(file_nums) > 0:
                     num = max(file_nums) + 1
                 else:

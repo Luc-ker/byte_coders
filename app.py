@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 import get_receipt
+import ocr
 
 class App():
     def __init__(self):
@@ -73,7 +74,7 @@ class MainFrame(SwitchableFrame):
 
     def upload_image(self):
         img_path = filedialog.askopenfilename()
-        if img_path[-4:] == ".png":
+        if img_path[-4:].lower() == ".png" or img_path[-4:].lower() == ".jpg":
             print("valid image file")
             self.process_image(img_path)
         else:
@@ -81,7 +82,7 @@ class MainFrame(SwitchableFrame):
             return
 
     def process_image(self, img_path):
-        print(img_path)
+        ocr.process_image_for_ocr(img_path)
 
 
 class GroupFrame(SwitchableFrame):
