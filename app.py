@@ -5,6 +5,7 @@ import ocr
 import code_send
 from random import randint
 import sqlMethod
+import csv
 
 class App():
     def __init__(self):
@@ -15,13 +16,17 @@ class App():
         self.menu_bar = tk.Menu(self.root)
         options_menu = tk.Menu(self.menu_bar, tearoff=0)
         options_menu.add_command(label="Upload Reciept", command=self.upload_reciept)
-        options_menu.add_command(label="Show groups", command=self.show_group_frame)
-        options_menu.add_command(label="Show test frame", command=self.show_test_frame)
+        options_menu.add_command(label="Show Groups", command=self.show_group_frame)
+        options_menu.add_command(label="Create New Group", command=self.show_group_create_frame)
+        options_menu.add_command(label="Show Test Frame", command=self.show_test_frame)
         options_menu.add_command(label="Logout", command=self.show_login_frame)
 
         self.menu_bar.add_cascade(label="Options", menu=options_menu)
 
-        self.current_frame = LoginFrame(self)
+        self.current_frame = MainFrame(self)
+        self.uname = "a"
+        self.show_menu_bar()
+        # self.current_frame = LoginFrame(self)
         self.clear_user()
 
         self.root.mainloop()
@@ -31,21 +36,28 @@ class App():
             return
         else:
             self.current_frame.destroy()
-            self.current_frame = MainFrame(self.root)
+            self.current_frame = MainFrame(self)
 
     def show_test_frame(self):
         if type(self.current_frame) == TestFrame:
             return
         else:
             self.current_frame.destroy()
-            self.current_frame = TestFrame(self.root)
+            self.current_frame = TestFrame(self)
 
     def show_group_frame(self):
         if type(self.current_frame) == GroupFrame:
             return
         else:
             self.current_frame.destroy()
-            self.current_frame = GroupFrame(self.root)
+            self.current_frame = GroupFrame(self)
+
+    def show_group_create_frame(self):
+        if type(self.current_frame) == GroupCreatorFrame:
+            return
+        else:
+            self.current_frame.destroy()
+            self.current_frame = GroupCreatorFrame(self)
 
     def show_login_frame(self):
         if type(self.current_frame) == LoginFrame:
@@ -76,7 +88,8 @@ class App():
     def hide_menu_bar(self):
         self.root.config(menu="")
 
-    def init_user(self, fname, lname):
+    def init_user(self, uname, fname, lname):
+        self.uname = uname
         self.fname = fname
         self.lname = lname
 
@@ -86,8 +99,11 @@ class App():
 
 
 class SwitchableFrame():
-    def __init__(self, root, color):
-        self.frame = tk.Frame(root, bg=color)
+    def __init__(self, app, color):
+        if type(app) != App:
+            raise TypeError("app isn't an app type!")
+        self.app = app
+        self.frame = tk.Frame(app.root, bg=color)
         self.items = []
 
     def destroy(self):
@@ -101,22 +117,27 @@ class SwitchableFrame():
 
 
 class MainFrame(SwitchableFrame):
-    def __init__(self, root):
-        super(MainFrame, self).__init__(root, "red")
+    def __init__(self, app):
+        super(MainFrame, self).__init__(app, "red")
         msg = "Press Space to take an image and Esc to cancel."
         self.info_label = tk.Label(self.frame, text=msg)
         self.img_take = tk.Button(self.frame, text="Take image", command=self.take_image)
         self.img_upload = tk.Button(self.frame, text="Upload image", command=self.upload_image)
-        self.items = [self.info_label, self.img_take, self.img_upload]
+        self.output = tk.Label(self.frame, text="Extracted text will show up here")
+        self.items = [self.info_label, self.img_take, self.img_upload, self.output]
         self.pack()
 
     def take_image(self):
         img_path = get_receipt.get_image()
+        if img_path == "":
+            return
         self.process_image(img_path)
 
     def upload_image(self):
         img_path = filedialog.askopenfilename()
-        if img_path[-4:].lower() == ".png" or img_path[-4:].lower() == ".jpg":
+        if img_path == "":
+            return
+        elif img_path[-4:].lower() == ".png" or img_path[-4:].lower() == ".jpg":
             print("valid image file")
             self.process_image(img_path)
         else:
@@ -124,15 +145,22 @@ class MainFrame(SwitchableFrame):
             return
 
     def process_image(self, img_path):
-        ocr.process_image_for_ocr(img_path)
+        if ocr.process_image_for_ocr(img_path):
+            extracted_text = ""
+            with open('bills_output/bill_items.csv', 'r') as file:
+                reader = csv.reader(file)
+                next(reader)
+                for row in reader:
+                    extracted_text += ", ".join(row)
+                    extracted_text += "\n"
+            extracted_text.removesuffix("\n")
+            self.output.configure(text=extracted_text)
+            # sqlMethod.insertBillItems()
 
 
 class UserFrame(SwitchableFrame):
     def __init__(self, app, color):
-        if type(app) != App:
-            raise TypeError("app isn't an app type!")
-        self.app = app
-        self.frame = tk.Frame(app.root, bg=color)
+        super(UserFrame, self).__init__(app, color)
         self.uname_label = tk.Label(self.frame, text="Username: ")
         self.uname_box = tk.Entry(self.frame)
         self.pword_label = tk.Label(self.frame, text="Password: ")
@@ -173,11 +201,11 @@ class LoginFrame(UserFrame):
             tk.messagebox.showinfo(title="Invalid credentials",
                 message="Invalid username or password!")
             return
-        fname, lname = res
-        self.login(fname, lname)
+        uname, fname, lname = res
+        self.login(uname, fname, lname)
 
-    def login(self, fname, lname):
-        self.app.init_user(fname, lname)
+    def login(self, uname, fname, lname):
+        self.app.init_user(uname, fname, lname)
         self.app.show_menu_bar()
         self.app.show_group_frame()
 
@@ -283,16 +311,42 @@ class PasswordResetFrame(SwitchableFrame):
 
 
 class GroupFrame(SwitchableFrame):
-    def __init__(self, root):
-        super(GroupFrame, self).__init__(root, "blue")
+    def __init__(self, app):
+        super(GroupFrame, self).__init__(app, "blue")
         self.label = tk.Label(self.frame, text="Groups that you're a part of:")
+        # to do: show what groups the user is part of
         self.items = [self.label]
         self.pack()
+    
+
+class GroupCreatorFrame(SwitchableFrame):
+    def __init__(self, app):
+        super(GroupCreatorFrame, self).__init__(app, "red")
+        msg = "Select people to create a new group with."
+        self.info_label = tk.Label(self.frame, text=msg)
+        self.grp_name_label = tk.Label(self.frame, text="Group Name")
+        self.grp_name_box = tk.Entry(self.frame)
+        self.users = [tk.Button(self.frame, text=f"{x[1]} {x[2]}", bg="white",
+                                command=lambda: self.select_user(i)) for i,
+                                x in enumerate(sqlMethod.getOtherUserDetails(app.uname))]
+        self.items = [self.info_label, self.grp_name_label, self.grp_name_box] + self.users
+        self.pack()
+        
+    def show_group_create_frame(self):
+        self.app.show_group_frame()
+
+    def select_user(self, idx):
+        btn = self.users[idx]
+        col = btn.cget("bg")
+        if col == "green":
+            btn.config(bg="white")
+        else:
+            btn.config(bg="green")
 
 
 class TestFrame(SwitchableFrame):
-    def __init__(self, root):
-        super(TestFrame, self).__init__(root, "blue")
+    def __init__(self, app):
+        super(TestFrame, self).__init__(app, "blue")
         self.test_button = tk.Button(self.frame, text="Press me!")
         self.test_label = tk.Label(self.frame, text="Press me!")
         self.items = [self.test_button, self.test_label]

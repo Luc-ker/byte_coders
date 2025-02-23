@@ -25,12 +25,12 @@ def get_image():
                 os.mkdir(path)
                 num = 1
             else:
-                file_nums = [int(f[8:-4]) for f in os.listdir(path) if re.match(r'bill_[0-9]+.(?:JPG|jpg)', f)]
+                file_nums = [int(f[5:-4]) for f in os.listdir(path) if re.match(r'bill_[0-9]+.(?:JPG|jpg)', f)]
                 if len(file_nums) > 0:
                     num = max(file_nums) + 1
                 else:
                     num = 1
-            img_name = f"{path}/receipt_{num}.png"
+            img_name = f"{path}/bill_{num}.png"
             cv2.imwrite(img_name, frame)
             break
 

@@ -75,13 +75,18 @@ def getUserEmail(un):
     return cursor.fetchall()[0][0]
 
 def getUserDetails(un, pw):
-    cursor.execute(f'''SELECT Firstname, Lastname FROM users WHERE Username = "{un}" AND Password = "{pw}"''')
+    cursor.execute(f'''SELECT Username, Firstname, Lastname FROM users WHERE Username = "{un}" AND Password = "{pw}"''')
     res = cursor.fetchall()
     if len(res) > 0:
         return res[0]
     else:
         return res
-    
+
+def getOtherUserDetails(un):
+    cursor.execute(f'''SELECT Username, Firstname, Lastname FROM users WHERE Username != "{un}"''')
+    res = cursor.fetchall()
+    return res
+
 def getUserPassword(un):
     cursor.execute(f'''SELECT Password FROM users WHERE Username = "{un}"''')
     return cursor.fetchall()[0][0]
@@ -115,17 +120,18 @@ def newItem(iID, name, price, store):
     
 #Adds the csv contents into the Items table
 #NOTE: Currently only works for format StoreName, ID, Name, Price
-def toDB():
-    with open('bills_output\\bill_items.csv', 'r') as file:
+def insertBillItems():
+    with open('bills_output/bill_items.csv', 'r') as file:
         reader = csv.reader(file)
         next(reader)
         for row in reader:
-            cursor.execute('''INSERT INTO item(Store, ItemID, Name, Price) VALUES (?, ?, ?, ?)''', row)
+            cursor.execute(f'''INSERT INTO {row[0]} (ItemID, Name, Price) VALUES (?, ?, ?)''', row[1:])
+            conn.commit()
 
 
 if __name__ == "__main__":
-    setup()
     print(getUserDetails("jlee4889", "test"))
+    print(getUserDetails("a", "be"))
 
 #setup()
 #toDB()
