@@ -164,11 +164,13 @@ class MainFrame(SwitchableFrame):
                 next(reader)
                 self.rows = []
                 # to do: add check to see if item is already in db
-                # to insert default value for expiry date
+                # to insert proper default value for expiry date
                 for i, row in enumerate(reader):
                     self.output_items.append(tk.Button(self.frame, text=f"{row[2]}",
                                                        command=lambda i=i: self.edit_item(i)))
-                    self.output_items.append(tk.Entry(self.frame))
+                    entry = tk.Entry(self.frame)
+                    entry.insert(0, "0")
+                    self.output_items.append(entry)
                     self.rows.append(row + ["", 0])
             self.output_items.append(tk.Button(self.frame, text="Save List",
                                                 command=self.save_list))
