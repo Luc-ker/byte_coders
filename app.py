@@ -147,7 +147,7 @@ class MainFrame(SwitchableFrame):
         img_path = filedialog.askopenfilename()
         if img_path == "":
             return
-        elif img_path[-4:].lower() == ".png" or img_path[-4:].lower() == ".jpg":
+        elif img_path[-4:].lower() == ".png" or img_path[-4:].lower() == ".jpg" or img_path[-5:].lower() == ".jpeg":
             print("valid image file")
             self.process_image(img_path)
         else:
@@ -161,12 +161,15 @@ class MainFrame(SwitchableFrame):
             self.create_labels()
             with open('bills_output/bill_items.csv', 'r') as file:
                 reader = csv.reader(file)
-                next(reader)
                 self.rows = []
                 # to do: add check to see if item is already in db
                 # to insert proper default value for expiry date
                 for i, row in enumerate(reader):
-                    self.output_items.append(tk.Button(self.frame, text=f"{row[2]}",
+                    if row[0] == "aldi":
+                        item_idx = 2
+                    else:
+                        item_idx = 1
+                    self.output_items.append(tk.Button(self.frame, text=f"{row[item_idx]}",
                                                        command=lambda i=i: self.edit_item(i)))
                     entry = tk.Entry(self.frame)
                     entry.insert(0, "0")

@@ -22,12 +22,11 @@ def extract_text_from_bill(image_path):
     if image is None:
         print(f"Error: Unable to load image at path '{image_path}'")
         return None
+    
+    image = cv2.resize(image, None, fx=2, fy=2)
 
     # Convert the image from BGR (OpenCV default) to RGB
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    # Convert to grayscale to simplify the image data
-    gray = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2GRAY)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Apply thresholding (you can adjust the threshold values if needed)
     ret, thresh_image = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
@@ -57,7 +56,6 @@ def is_tesco_bill(line):
 def csv_bill(text, supermarket_name):
     # Extracting the bill items
     valid_bill = False
-    # loose = False
     bill_items = []
     for line in text.split("\n"):
         if line.strip() == "":
@@ -76,8 +74,9 @@ def csv_bill(text, supermarket_name):
             valid_bill = True
         elif supermarket_name == "tesco" and is_tesco_bill(line):
             line_txt = re.search(tesco_pattern, line).group(0)
+            print(line_txt)
             line_txt = line_txt.split(" ")
-            line_txt = [supermarket_name, " ".join(line_txt[1:-1]), line_txt[-1]]
+            line_txt = [supermarket_name, " ".join(line_txt[0:-1]), line_txt[-1]]
             bill_items.append(line_txt)
             valid_bill = True
 
