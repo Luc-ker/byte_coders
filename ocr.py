@@ -10,6 +10,7 @@ cwd = os.getcwd()  # Get the current working directory (cwd)
 # Regex pattern to match item names and prices
 aldi_pattern = r"^\d+\s+([A-Z0-9\s]+?)\s+(\d+\.\d{2})"
 lidl_pattern = r"^([A-Z0-9\s]+?)\s+(\d+\.\d{2})"
+tesco_pattern = r"^([A-Z0-9\s]+?)\s+£(\d+\.\d{2})"
 # lidl_pattern_2 = r"^(\d+\.\d{3})\s+kg\s+@\s+£(\d+\.\d{2})/kg"
 
 def extract_text_from_bill(image_path):
@@ -47,7 +48,10 @@ def is_aldi_bill(line):
     return re.match(aldi_pattern, line) # regex acc to Aldi bills
 
 def is_lidl_bill(line):
-    return re.match(lidl_pattern, line) # regex acc to Aldi bills
+    return re.match(lidl_pattern, line) # regex acc to Lidl bills
+
+def is_tesco_bill(line):
+    return re.match(tesco_pattern, line) # regex acc to Lidl bills
 
 # function to extract bill items from the text and save it to a csv file
 def csv_bill(text, supermarket_name):
@@ -66,6 +70,12 @@ def csv_bill(text, supermarket_name):
             valid_bill = True
         elif supermarket_name == "lidl" and is_lidl_bill(line):
             line_txt = re.search(lidl_pattern, line).group(0)
+            line_txt = line_txt.split(" ")
+            line_txt = [supermarket_name, " ".join(line_txt[1:-1]), line_txt[-1]]
+            bill_items.append(line_txt)
+            valid_bill = True
+        elif supermarket_name == "tesco" and is_tesco_bill(line):
+            line_txt = re.search(tesco_pattern, line).group(0)
             line_txt = line_txt.split(" ")
             line_txt = [supermarket_name, " ".join(line_txt[1:-1]), line_txt[-1]]
             bill_items.append(line_txt)

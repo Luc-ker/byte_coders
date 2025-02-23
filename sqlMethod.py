@@ -1,4 +1,6 @@
-import sqlite3, csv, os
+import sqlite3
+import datetime as dt
+
 conn = sqlite3.connect('example.db')
 cursor = conn.cursor()
 
@@ -25,7 +27,8 @@ def setup():
     `ItemID` int(11) PRIMARY KEY,
     `Name` varchar(40) DEFAULT NULL,
     `Price` decimal(4,2) DEFAULT NULL,
-    `Store` VARCHAR(20) DEFAULT NULL
+    `StoreID` VARCHAR(20) DEFAULT NULL,
+    FOREIGN KEY (StoreID) REFERENCES stores(StoreID)
     );''')
     #ShoppingList - Links groups to lists of items
     cursor.execute('''
@@ -44,6 +47,11 @@ def setup():
     FOREIGN KEY(ItemID) REFERENCES item(ItemID),
     FOREIGN KEY(ListID) REFERENCES shoppinglist(ListID)
     );''')
+    #Stores - Stores name of store & ID
+    cursor.execute('''CREATE TABLE `stores` (
+    `StoreID` int(11) PRIMARY KEY,
+    `Name` varchar(30) DEFAULT NULL
+    );''')
     #Users - Stores information on each user
     cursor.execute('''
     CREATE TABLE `users` (
@@ -54,6 +62,7 @@ def setup():
     `Password` varchar(30) DEFAULT NULL,
     `Email` varchar(50) DEFAULT NULL
     );''')
+    conn.commit()
     #cursor.execute('''INSERT INTO users VALUES('Brandon', 'Ryan-Izzard', '1', 'Brizzard', 'no')''')
     #cursor.execute('''SELECT * FROM users;''')
     #print(cursor.fetchall())
@@ -117,19 +126,52 @@ def newList(lID, gID, iID, days, siID):
 #Creates a new item
 def newItem(iID, name, price, store):
     cursor.execute('''INSERT INTO item VALUES(?, ?, ?, ?)''', (iID, name, price, store))
+
+def getItemID(itemName, storeID):
+    cursor.execute('''SELECT ItemID FROM item WHERE Name = ? AND StoreID = ?''', (itemName, storeID))
+    res = cursor.fetchall()
+    if len(res) > 0:
+        return res[0][0]
+    else:
+        return res    
+
+def itemExists(itemID):
+    if itemID is None:
+        return False
+    cursor.execute('''SELECT rowID FROM item WHERE ItemID = ?''', itemID)
+    res = cursor.fetchall()
+    return len(res) > 0    
     
 #Adds the csv contents into the Items table
-#NOTE: Currently only works for format StoreName, ID, Name, Price
-def insertBillItems():
-    with open('bills_output/bill_items.csv', 'r') as file:
-        reader = csv.reader(file)
-        next(reader)
-        for row in reader:
-            cursor.execute(f'''INSERT INTO {row[0]} (ItemID, Name, Price) VALUES (?, ?, ?)''', row[1:])
-            conn.commit()
+#NOTE: Currently only works for format StoreID, ItemID, Name, Price
+def insertBillItems(rows):
+    for row in rows:
+        cursor.execute('''SELECT StoreID FROM stores WHERE Name = ?''', [row[0]])
+        # print(cursor.fetchall())
+        row[0] = cursor.fetchall()[0][0]
+        if row[0] != "aldi":
+            row[1] = None
+        row[-2] = dt.datetime.now().date()
+        row[-1] = row[-2] + dt.timedelta(days=row[-1])
+        if itemExists(row[1]):
+            cursor.execute(f'''UPDATE item SET StoreID''')
+        else:
+            cursor.execute(f'''INSERT INTO item (StoreID, ItemID,
+                            Name, Price, Last_Update, Expiry_Date)
+                            VALUES (?, ?, ?, ?, ?, ?)''', row)
+        conn.commit()
+
+def urgentItems():
+    today = dt.datetime.now().date() + dt.timedelta(days=1)
+    latest = today + dt.timedelta(days=3)
+    cursor.execute('''SELECT Name, Expiry_Date, Price FROM item
+                   WHERE Expiry_Date BETWEEN ? AND ?''',
+                   (today, latest))
+    return cursor.fetchall()
 
 
 if __name__ == "__main__":
+    # setup()
     print(getUserDetails("jlee4889", "test"))
     print(getUserDetails("a", "be"))
 

@@ -19,6 +19,7 @@ class App():
         options_menu.add_command(label="Show Groups", command=self.show_group_frame)
         options_menu.add_command(label="Create New Group", command=self.show_group_create_frame)
         options_menu.add_command(label="Show Test Frame", command=self.show_test_frame)
+        options_menu.add_command(label="Generate Shopping List", command=self.show_shop_frame)
         options_menu.add_command(label="Logout", command=self.show_login_frame)
 
         self.menu_bar.add_cascade(label="Options", menu=options_menu)
@@ -58,6 +59,13 @@ class App():
         else:
             self.current_frame.destroy()
             self.current_frame = GroupCreatorFrame(self)
+            
+    def show_shop_frame(self):
+        if type(self.current_frame) == ShoppingListFrame:
+            return
+        else:
+            self.current_frame.destroy()
+            self.current_frame = ShoppingListFrame(self)
 
     def show_login_frame(self):
         if type(self.current_frame) == LoginFrame:
@@ -123,9 +131,18 @@ class MainFrame(SwitchableFrame):
         self.info_label = tk.Label(self.frame, text=msg)
         self.img_take = tk.Button(self.frame, text="Take image", command=self.take_image)
         self.img_upload = tk.Button(self.frame, text="Upload image", command=self.upload_image)
-        self.output = tk.Label(self.frame, text="Extracted text will show up here")
+        self.output = tk.Label(self.frame, text="Your shopping list will show up below")
         self.items = [self.info_label, self.img_take, self.img_upload, self.output]
+        self.create_labels()
+
+        self.output_items = []
         self.pack()
+        # self.process_image("bills_image/bill_1.JPG") # for testing purposes only
+
+    def create_labels(self):
+        self.item_label = tk.Label(self.frame, text="Item")
+        self.days_label = tk.Label(self.frame, text="Days expected to last:")
+        self.output_items = [self.item_label, self.days_label]
 
     def take_image(self):
         img_path = get_receipt.get_image()
@@ -145,17 +162,51 @@ class MainFrame(SwitchableFrame):
             return
 
     def process_image(self, img_path):
+        for item in self.output_items:
+            item.destroy()
         if ocr.process_image_for_ocr(img_path):
-            extracted_text = ""
+            self.create_labels()
             with open('bills_output/bill_items.csv', 'r') as file:
                 reader = csv.reader(file)
                 next(reader)
-                for row in reader:
-                    extracted_text += ", ".join(row)
-                    extracted_text += "\n"
-            extracted_text.removesuffix("\n")
-            self.output.configure(text=extracted_text)
-            # sqlMethod.insertBillItems()
+                self.rows = []
+                # to do: add check to see if item is already in db
+                # to insert default value for expiry date
+                for i, row in enumerate(reader):
+                    self.output_items.append(tk.Button(self.frame, text=f"{row[2]}",
+                                                       command=lambda i=i: self.edit_item(i)))
+                    self.output_items.append(tk.Entry(self.frame))
+                    self.rows.append(row + ["", 0])
+            self.output_items.append(tk.Button(self.frame, text="Save List",
+                                                command=self.save_list))
+            for i, item in enumerate(self.output_items):
+                item.grid(row=len(self.items)+i//2, column=i%2)
+
+    def edit_item(self, idx):
+        btn = self.output_items[idx]
+        item = tk.simpledialog.askstring(title="Change item name",
+            prompt="What should this item be called?", initialvalue=btn.cget("text"))
+        btn.configure(text=item)
+        self.rows[idx][2] = item
+
+    def save_list(self):
+        day_counts = [x.get() for x in self.output_items[3::2]]
+        if True in [x=="" for x in day_counts]:
+            tk.messagebox.showinfo(title="Missing Details",
+                message="Please fill out all the expected dates!")
+        elif False in [x.isdigit() for x in day_counts]:
+            tk.messagebox.showinfo(title="Invalid Number of Days",
+                message="Days must be numbers greater than 0.")
+        else:
+            for i, days in enumerate(day_counts):
+                self.rows[i][-1] = int(days)
+            sqlMethod.insertBillItems(self.rows)
+            self.app.show_group_frame()
+
+    def pack(self):
+        self.frame.pack()
+        for item in self.items:
+            item.grid(columnspan=2)
 
 
 class UserFrame(SwitchableFrame):
@@ -342,6 +393,39 @@ class GroupCreatorFrame(SwitchableFrame):
             btn.config(bg="white")
         else:
             btn.config(bg="green")
+
+
+class ShoppingListFrame(SwitchableFrame):
+    def __init__(self, app):
+        super(ShoppingListFrame, self).__init__(app, "red")
+        self.item_label = tk.Label(self.frame, text="Item")
+        self.date_label = tk.Label(self.frame, text="Expiry Date")
+        self.price_label = tk.Label(self.frame, text="Price")
+        self.items = [self.item_label, self.date_label, self.price_label]
+        self.parse_data()
+        self.pack()
+
+    def parse_data(self):
+        items = sqlMethod.urgentItems()
+        total_price = 0
+        for item in items:
+            for i, attr in enumerate(item):
+                if i == 2:
+                    total_price += attr
+                self.items.append(tk.Label(self.frame, text=f"{attr}"))
+        self.items.append(tk.Label(self.frame, text="Total"))
+        self.items.append(tk.Label(self.frame, text=f"{round(total_price, 2)}"))
+
+    def pack(self):
+        self.frame.pack()
+        # print(self.items)
+        for i, item in enumerate(self.items):
+            if item == self.items[-2]:
+                item.grid(row=i//3, column=i%3, columnspan=2)
+            elif item == self.items[-1]:
+                item.grid(row=i//3, column=2)
+            else:
+                item.grid(row=i//3, column=i%3)        
 
 
 class TestFrame(SwitchableFrame):
