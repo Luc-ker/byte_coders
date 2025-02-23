@@ -71,6 +71,9 @@ def setup():
 #Creates new user
 def newUser(fn, ln, un, pw, email):
     cursor.execute('''INSERT INTO users VALUES(?, ?, NULL, ?, ?, ?)''', (fn, ln, un, pw, email))
+    id = cursor.lastrowid
+    cursor.execute('''UPDATE users SET UserID = ?
+                   WHERE Username = ? AND Password = ?''', [id, un, pw])
     conn.commit()
 
 # function assumes that the user exists!
@@ -96,6 +99,11 @@ def getOtherUserDetails(un):
     res = cursor.fetchall()
     return res
 
+def getUserID(fname, lname):
+    cursor.execute('''SELECT UserID FROM users WHERE Firstname = ?
+                   AND Lastname = ?''', (fname, lname))
+    return cursor.fetchall()[0][0]
+
 def getUserPassword(un):
     cursor.execute(f'''SELECT Password FROM users WHERE Username = "{un}"''')
     return cursor.fetchall()[0][0]
@@ -106,13 +114,22 @@ def updatePassword(un, pw):
 
 
 #Adds a new user to the group
-def appendGroup(user, group, gID):
-    cursor.execute('''INSERT INTO groupsusers VALUES(?, ?, ?)''', (user, group, gID))
+def appendToGroup(userID, groupID):
+    cursor.execute('''INSERT INTO groupsusers VALUES(?, ?, ?)''', (userID, groupID, None))
+    id = cursor.lastrowid
+    cursor.execute('''UPDATE groupsusers SET guID = ?
+        WHERE UserID = ? AND GroupID = ?''', [id, userID, groupID])
+    conn.commit()
     
-#Creates a new group, then adds a user to the group
-def newGroup(g, gname, user, gID):
-    cursor.execute('''INSERT INTO groups VALUES(?, ?)''', (g, gname))
-    appendGroup(user, g, gID)
+#Creates a new group, then adds users to the group
+def newGroup(gname, users):
+    cursor.execute('''INSERT INTO groups VALUES(?, ?)''', (None, gname))
+    groupID = cursor.lastrowid
+    cursor.execute('''UPDATE groups SET GroupID = ?
+        WHERE Name = ?''', [groupID, gname])
+    conn.commit()
+    for user in users:
+        appendToGroup(getUserID(user[0], user[1]), groupID)
 
 #Adds a new item to a list
 def appendList(iID, lID, days ,siID):
@@ -135,10 +152,12 @@ def getItemID(itemName, storeID):
     else:
         return res    
 
-def itemExists(itemID):
-    if itemID is None:
-        return False
-    cursor.execute('''SELECT rowID FROM item WHERE ItemID = ?''', itemID)
+def itemExists(itemID, name, storeID):
+    if itemID is not None:
+        cursor.execute('''SELECT rowID FROM item WHERE ItemID = ?''', itemID)
+    else:
+        cursor.execute('''SELECT rowID FROM item WHERE Name = ?
+                       AND StoreID = ?''', [name, storeID])
     res = cursor.fetchall()
     return len(res) > 0    
     
@@ -147,19 +166,24 @@ def itemExists(itemID):
 def insertBillItems(rows):
     for row in rows:
         cursor.execute('''SELECT StoreID FROM stores WHERE Name = ?''', [row[0]])
-        # print(cursor.fetchall())
         row[0] = cursor.fetchall()[0][0]
         if row[0] != "aldi":
             row[1] = None
         row[-2] = dt.datetime.now().date()
         row[-1] = row[-2] + dt.timedelta(days=row[-1])
-        if itemExists(row[1]):
-            cursor.execute(f'''UPDATE item SET StoreID''')
+        if itemExists(row[1], row[2], row[0]):
+            cursor.execute(f'''UPDATE item SET Price = ?, Last_Update = ?,
+                           Expiry_Date = ?''', row[3:])
+            conn.commit()
         else:
             cursor.execute(f'''INSERT INTO item (StoreID, ItemID,
                             Name, Price, Last_Update, Expiry_Date)
                             VALUES (?, ?, ?, ?, ?, ?)''', row)
-        conn.commit()
+            if row[0] != "aldi":
+                id = cursor.lastrowid
+                cursor.execute('''UPDATE item SET ItemID = ?
+                    WHERE StoreID = ? AND Name = ?''', [id, row[0], row[2]])
+                conn.commit()
 
 def urgentItems():
     today = dt.datetime.now().date() + dt.timedelta(days=1)
@@ -169,9 +193,31 @@ def urgentItems():
                    (today, latest))
     return cursor.fetchall()
 
+def getGroupData(un):
+    cursor.execute('''
+        SELECT groups.GroupID
+        FROM groups
+        INNER JOIN groupsusers ON groups.GroupID = groupsusers.GroupID
+        INNER JOIN users ON users.UserID = groupsusers.UserID
+        WHERE users.Username = ?''', (un))
+    results = cursor.fetchall()
+    if len(results) > 0:
+        groups = []
+        for res in results:
+            cursor.execute('''
+                SELECT users.Firstname, users.Lastname, groups.Name
+                FROM users
+                INNER JOIN groupsusers ON users.UserID = groupsusers.UserID
+                INNER JOIN groups ON groupsusers.GroupID = groups.GroupID
+                WHERE groups.GroupID = ?''', (res[0],))
+            groups.append(cursor.fetchall())
+        return groups
+    else:
+        return results
 
 if __name__ == "__main__":
     # setup()
+    # newUser("zebra", "giraffe", "test3", "test3", "lucker4889@gmail.com")
     print(getUserDetails("jlee4889", "test"))
     print(getUserDetails("a", "be"))
 

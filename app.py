@@ -12,22 +12,22 @@ class App():
         self.root = tk.Tk()
         self.root.title("Auto Shopping List")
         self.root.geometry("512x512")
+        self.root.resizable(False, False)
         
         self.menu_bar = tk.Menu(self.root)
         options_menu = tk.Menu(self.menu_bar, tearoff=0)
         options_menu.add_command(label="Upload Reciept", command=self.upload_reciept)
         options_menu.add_command(label="Show Groups", command=self.show_group_frame)
         options_menu.add_command(label="Create New Group", command=self.show_group_create_frame)
-        options_menu.add_command(label="Show Test Frame", command=self.show_test_frame)
         options_menu.add_command(label="Generate Shopping List", command=self.show_shop_frame)
         options_menu.add_command(label="Logout", command=self.show_login_frame)
 
         self.menu_bar.add_cascade(label="Options", menu=options_menu)
 
-        self.current_frame = MainFrame(self)
-        self.uname = "a"
-        self.show_menu_bar()
-        # self.current_frame = LoginFrame(self)
+        # self.uname = "a"
+        # self.show_menu_bar()
+        # self.current_frame = GroupCreatorFrame(self)
+        self.current_frame = LoginFrame(self)
         self.clear_user()
 
         self.root.mainloop()
@@ -38,13 +38,6 @@ class App():
         else:
             self.current_frame.destroy()
             self.current_frame = MainFrame(self)
-
-    def show_test_frame(self):
-        if type(self.current_frame) == TestFrame:
-            return
-        else:
-            self.current_frame.destroy()
-            self.current_frame = TestFrame(self)
 
     def show_group_frame(self):
         if type(self.current_frame) == GroupFrame:
@@ -111,14 +104,14 @@ class SwitchableFrame():
         if type(app) != App:
             raise TypeError("app isn't an app type!")
         self.app = app
-        self.frame = tk.Frame(app.root, bg=color)
+        self.frame = tk.Frame(app.root, bg=color, width=512, height=512)
         self.items = []
 
     def destroy(self):
         self.frame.destroy()
 
     def pack(self):
-        self.frame.pack()
+        self.frame.pack(fill="both", expand=True)
         if type(self.items) == list and len(self.items) > 0:
             for item in self.items:
                 item.pack()
@@ -204,9 +197,9 @@ class MainFrame(SwitchableFrame):
             self.app.show_group_frame()
 
     def pack(self):
-        self.frame.pack()
+        self.frame.pack(fill="both", expand=True)
         for item in self.items:
-            item.grid(columnspan=2)
+            item.grid(columnspan=2, padx=5, pady=2)
 
 
 class UserFrame(SwitchableFrame):
@@ -220,7 +213,7 @@ class UserFrame(SwitchableFrame):
                       self.pword_label, self.pword_box]
 
     def pack(self):
-        self.frame.pack()
+        self.frame.pack(fill="both", expand=True)
         for i, item in enumerate(self.items):
             item.grid(row=i//2, column=i%2)
 
@@ -258,7 +251,7 @@ class LoginFrame(UserFrame):
     def login(self, uname, fname, lname):
         self.app.init_user(uname, fname, lname)
         self.app.show_menu_bar()
-        self.app.show_group_frame()
+        self.app.upload_reciept()
 
     def create_acc_frame(self):
         self.app.create_acc_frame()
@@ -365,8 +358,12 @@ class GroupFrame(SwitchableFrame):
     def __init__(self, app):
         super(GroupFrame, self).__init__(app, "blue")
         self.label = tk.Label(self.frame, text="Groups that you're a part of:")
-        # to do: show what groups the user is part of
         self.items = [self.label]
+        results = sqlMethod.getGroupData(self.app.uname)
+        for row in results:
+            self.items.append(tk.Label(self.frame, text=f"Group {row[0][2]}"))
+            for user in row:
+                self.items.append(tk.Label(self.frame, text=f"{user[0]} {user[1]}"))
         self.pack()
     
 
@@ -375,16 +372,41 @@ class GroupCreatorFrame(SwitchableFrame):
         super(GroupCreatorFrame, self).__init__(app, "red")
         msg = "Select people to create a new group with."
         self.info_label = tk.Label(self.frame, text=msg)
-        self.grp_name_label = tk.Label(self.frame, text="Group Name")
+        self.grp_name_label = tk.Label(self.frame, text="Group Name: ")
         self.grp_name_box = tk.Entry(self.frame)
-        self.users = [tk.Button(self.frame, text=f"{x[1]} {x[2]}", bg="white",
-                                command=lambda: self.select_user(i)) for i,
-                                x in enumerate(sqlMethod.getOtherUserDetails(app.uname))]
-        self.items = [self.info_label, self.grp_name_label, self.grp_name_box] + self.users
+        self.user_search_label = tk.Label(self.frame, text="Search for User: ")
+        self.search = tk.StringVar(self.frame)
+        self.user_search_box = tk.Entry(self.frame, textvariable=self.search)
+        self.user_search_box.bind("<Key>", self.get_users)
+        self.get_users()
+        self.create_grp_btn = tk.Button(self.frame, text="Create Group", command=self.create_group)
+        self.items = [self.info_label, self.grp_name_label, self.grp_name_box,
+                      self.user_search_label, self.user_search_box] + self.users + [self.create_grp_btn]
         self.pack()
         
-    def show_group_create_frame(self):
+    def show_group_frame(self):
         self.app.show_group_frame()
+
+    def get_users(self, event=None):
+        if event is not None:
+            for user in self.users:
+                user.destroy()
+            filter = self.user_search_box.get()
+            if event.char == "\x08":
+                filter = filter[:-1]
+            else:
+                filter += event.char
+        else:
+            filter = ""
+        self.users = self.get_users_from_db(filter)
+        if event is not None:
+            self.pack(event)
+            
+    def get_users_from_db(self, filter=""):
+        return [tk.Button(self.frame, text=f"{x[1]} {x[2]}", bg="white",
+            command=lambda i=i: self.select_user(i)) for i,
+            x in enumerate(sqlMethod.getOtherUserDetails(self.app.uname))
+            if filter in f"{x[1]} {x[2]}"]   
 
     def select_user(self, idx):
         btn = self.users[idx]
@@ -393,6 +415,32 @@ class GroupCreatorFrame(SwitchableFrame):
             btn.config(bg="white")
         else:
             btn.config(bg="green")
+
+    def create_group(self):
+        users = [[self.app.fname, self.app.lname]] + [x.cget("text").split(" ") for x in self.users
+                 if x.cget("bg") == "green"]
+        name = self.grp_name_box.get()
+        if name.rstrip() == "":
+            tk.messagebox.showinfo(title="Missing Group Name",
+                message="You haven't made a group name...")
+        elif len(users) == 0:
+            tk.messagebox.showinfo(title="Invalid Group",
+                message="That's not enough to form a group!")
+        else:
+            sqlMethod.newGroup(name, users)
+            tk.messagebox.showinfo(title="Success",
+                message="New group created!")
+            self.show_group_frame()
+
+    def pack(self, event=None):
+        if event is not None:
+            for i, item in enumerate(self.users):
+                item.grid(row=(i+6)//2, column=i%2, padx=5, pady=2)
+        else:
+            self.frame.pack(fill="both", expand=True)
+            self.items[0].grid(row=0, column=0, columnspan=2)
+            for i, item in enumerate(self.items[1:]):
+                item.grid(row=(i+2)//2, column=i%2, padx=5, pady=2)
 
 
 class ShoppingListFrame(SwitchableFrame):
@@ -417,8 +465,7 @@ class ShoppingListFrame(SwitchableFrame):
         self.items.append(tk.Label(self.frame, text=f"{round(total_price, 2)}"))
 
     def pack(self):
-        self.frame.pack()
-        # print(self.items)
+        self.frame.pack(fill="both", expand=True)
         for i, item in enumerate(self.items):
             if item == self.items[-2]:
                 item.grid(row=i//3, column=i%3, columnspan=2)
