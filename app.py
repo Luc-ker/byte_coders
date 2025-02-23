@@ -10,7 +10,7 @@ import csv
 class App():
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Auto Shopping List")
+        self.root.title("No Cons Shopping Gen")
         self.root.geometry("512x512")
         self.root.resizable(False, False)
         
