@@ -2,7 +2,7 @@ import cv2
 import pytesseract
 import os
 import csv
-import regex as re
+import re
 
 supermarkets_list = ["tesco", "asda", "sainsbury", "morrisons", "aldi", "lidl", "waitrose", "m&s"]
 cwd = os.getcwd()  # Get the current working directory (cwd)
